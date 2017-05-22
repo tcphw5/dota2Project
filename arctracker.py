@@ -7,7 +7,7 @@ Created on Sat May 20 19:48:27 2017
 @author: tpwin10
 """
 #Flask stuff
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 app = Flask(__name__)
 #
 
@@ -21,7 +21,9 @@ api = dota2api.Initialise("EECA0D811A31963E8E259DBB8EA055C4")
 #Account IDs for manually found arc warden players
 #MMRS: (vaxasmurf, 5k, 5k, 5k, 7k (alex the fool))
 #can be changed for any hero later
-arcPlayers =    players = [389202842, 131588917, 129705032, 128512494, 11984011]
+#only one person for faster testing
+#389202842, 131588917, 129705032, 128512494,
+arcPlayers =    players = [11984011]
 #hard coded for now
 arc_id = 113
 #
@@ -35,7 +37,8 @@ def result():
     if request.method == 'GET':
         #counting items with hardcoded arc things (obviously. "arc" tracker atm)
         result = countItems(arcPlayers, arc_id)
-        return render_template("result.html", result = result)
+        result[0] = sorted(result[0].items(), key=lambda x: x[1], reverse=True)
+        return render_template("result.html", result = result[0], total = result[1])
 
 #returns a dict with total unique items and counts of purchaes in games played
 #as <heroID> out of all <players> last 100 overall games
@@ -78,8 +81,10 @@ def countItems(players, heroID):
     total_Items = [x for x in total_Items if x != 0]
     countedItems = Counter(total_Items)
     countedItemsDict = dict(countedItems)
-
-    return countedItemsDict
+    results = []
+    results.append(countedItemsDict)
+    results.append(match_counter)
+    return results
 
 
 if __name__ == '__main__':

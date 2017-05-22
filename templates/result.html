@@ -1,17 +1,35 @@
 <!doctype html>
 <html>
+   <head>
+     <link rel="stylesheet" media="screen" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+   </head>
    <body>
+     <div class="row">
+       <div class="col-md-4"></div>
+       <div class="col-md-4">
+         <h4>Total Matches Looked at: {{ total }}</h4>
+         <table class="table table-bordered table-striped">
+           <tr>
+             <th> Image </th>
+             <th> Item </th>
+             <th> # purchased </th>
+             <th> % of total </th>
 
-      <table border = 1>
-         {% for key, value in result.items() %}
+            {% for key, value in result %}
+               
+               <tr>
+                  <td height="64"> <img class="center-block" src="static/images/Hand_of_Midas_icon.png" alt="midas"></td>
+                  <td height="64"> {{ key }} </td>
+                  <td height="64"> {{ value }} </td>
+                  <td height="64"> {{ value / total }} </td>
+               </tr>
 
-            <tr>
-               <th> {{ key }} </th>
-               <td> {{ value }} </td>
-            </tr>
+            {% endfor %}
+         </table>
+       </div>
+       <div class="col-md-4"></div>
+     </div>
 
-         {% endfor %}
-      </table>
 
    </body>
 </html>
