@@ -8,6 +8,7 @@
        <div class="col-md-4"></div>
        <div class="col-md-4">
          <h4>Total Matches Looked at: {{ total }}</h4>
+         <img src="{% for hero in allHeros %} {% if hero['id'] == heroID %} {{ hero['url_large_portrait'] }}{% endif %}{% endfor %}" alt="HeroPic">
          <table class="table table-bordered table-striped">
            <tr>
              <th> Image </th>
@@ -18,10 +19,11 @@
             {% for key, value in result %}
                
                <tr>
-                  <td height="64"> <img class="center-block" src="static/images/Hand_of_Midas_icon.png" alt="midas"></td>
-                  <td height="64"> {{ key }} </td>
+                  <td height="64"> <img class="center-block" src="{% for item in allItems %} {% if item['id'] == key %} {{ item['url_image'] }}{% endif %}{% endfor %}" alt="{{ key }}"></td>
+
+                  <td height="64"> {% for item in allItems %} {% if item['id'] == key %} {{ item['localized_name'] }}{% endif %}{% endfor %} </td>
                   <td height="64"> {{ value }} </td>
-                  <td height="64"> {{ value / total }} </td>
+                  <td height="64"> {{ (value / total) * 100 }} </td>
                </tr>
 
             {% endfor %}

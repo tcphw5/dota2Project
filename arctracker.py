@@ -12,10 +12,13 @@ from flask_sqlalchemy import SQLAlchemy
 #arc track stuff
 import dota2api
 from collections import Counter
-import pandas as pd
+from bs4 import BeautifulSoup
+import urllib.request
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:lol@localhost/arcbase'
 db = SQLAlchemy(app)
+
+api = dota2api.Initialise("EECA0D811A31963E8E259DBB8EA055C4")
 
 
 # set up db object for stored games
@@ -43,71 +46,91 @@ class Game3(db.Model):
 
 
 
-api = dota2api.Initialise("EECA0D811A31963E8E259DBB8EA055C4")
+
 
 #Account IDs for manually found arc warden players
 #MMRS: (vaxasmurf, 5k, 5k, 5k, 7k (alex the fool))
 #can be changed for any hero later
 #only one person for faster testing
 #389202842, 131588917, 129705032, 128512494,
-arcPlayers = players = [11984011]
+topPlayers = [11984011]
 #hard coded for now
-arc_id = 113
+#hero_id = 113
 
 
 
 @app.route('/')
 def homepage():
-    return render_template("homepage.html")
+    allHeros = api.get_heroes()['heroes']
+    return render_template("homepage.html", allHeros=allHeros)
 
-@app.route('/result', methods = ['POST', 'GET'])
-def result():
+@app.route('/result/<hero_id>', methods = ['POST', 'GET'])
+def result(hero_id):
+    if request.method == 'POST':
+        allHeros = api.get_heroes()['heroes']
+        topPlayers = dbuffScrape(hero_id, allHeros)
+        result = countItems(topPlayers, hero_id)
+        allItems = api.get_game_items()['items']
+        result[0] = sorted(result[0].items(), key=lambda x: x[1], reverse=True)
+        return render_template("result.html", result=result[0], total=result[1], allItems=allItems,
+                               allHeros=allHeros, heroID=int(hero_id))
+
     if request.method == 'GET':
         #counting items with hardcoded arc things (obviously. "arc" tracker atm)
-        result = countItems(arcPlayers, arc_id)
+        topPlayers = [11984011]
+        result = countItems(topPlayers, hero_id)
+        allItems = api.get_game_items()['items']
         result[0] = sorted(result[0].items(), key=lambda x: x[1], reverse=True)
-        return render_template("result.html", result = result[0], total = result[1])
+        return render_template("result.html", result=result[0], total=result[1], allItems=allItems)
 
 #returns a dict with total unique items and counts of purchaes in games played
 #as <heroID> out of all <players> last 100 overall games
 def countItems(players, heroID):
-    games = []
 
-    allItems = api.get_game_items()['items']
+    allgames = []
     total_Items = []
+    pictures = []
     match_counter = 0
 
 
     # goes though each players history and filters all the arc warden games into
     # the arcgames list.
+
+    players = players[:2]
+    #print(players)
     for player in players:
         #each call gets the last 100 TOTAL games (not just arc games)
         try:
             history = api.get_match_history(account_id=player)
+            print(history)
             for game in history['matches']:
+                #print(heroID)
+                print(game['players'])
                 for guy in game['players']:
-                    if guy['account_id'] == player and guy['hero_id'] == heroID:
-                        games.append(game['match_id'])
+                    if str(guy['account_id']) == str(player) and int(guy['hero_id']) == int(heroID):
+                        allgames.append(game['match_id'])
         except Exception as e:
             continue
 
 
     # go through arc warden games one at a time counting items
     # saves new games to postgres database
-    for gameID in games:
+    for gameID in allgames:
         match = api.get_match_details(match_id=gameID)
+        print(match)
         for guy in match['players']:
-            if guy['hero_id'] == heroID:
+            if int(guy['hero_id']) == int(heroID):
                 match_counter += 1
                 items = ["none", "none", "none", "none", "none", "none"]
                 for x in range(6):
                     if guy['item_'+str(x)] != 0:
-                        total_Items.append(guy['item_'+str(x)+'_name'])
-                        items[x] = guy['item_'+str(x)+'_name']
-                if Game3.query.filter_by(matchID=str(gameID)).first() is None:
-                    newgame = Game3(str(gameID), items[0], items[1], items[2], items[3], items[4], items[5])
-                    db.session.add(newgame)
-                    db.session.commit()
+                        total_Items.append(guy['item_'+str(x)])
+
+                #removed saving to db until ready
+                #if Game3.query.filter_by(matchID=str(gameID)).first() is None:
+                #    newgame = Game3(str(gameID), items[0], items[1], items[2], items[3], items[4], items[5])
+                #   db.session.add(newgame)
+                #    db.session.commit()
 
                 '''
                 #backpack not counted for now
@@ -122,6 +145,46 @@ def countItems(players, heroID):
     results.append(match_counter)
     return results
 
+
+def dbuffScrape(hero_id, allHeros):
+
+    dbuffHeroNames = {}
+    for hero in allHeros:
+        dbuffHeroNames.update({hero['id']: hero['localized_name'].lower().replace(" ", "-")})
+
+    header = {'User-Agent': 'test header'}
+    req = urllib.request.Request('https://www.dotabuff.com/heroes/' + dbuffHeroNames[int(hero_id)] + '/players',
+                                 headers=header)
+    page = None
+
+    with urllib.request.urlopen(req) as response:
+        page = response.read()
+
+    soup = BeautifulSoup(page, "html.parser")
+
+    table = soup.findChildren("table")
+
+    topPlayers = table[1]
+
+    rows = topPlayers.findChildren('tr')
+
+    playerIDs = set()
+
+    for row in rows:
+        cells = row.findChildren('td')
+        cells2 = row.findChildren('td')
+        for cell in cells:
+            if "segment-win" in (str(cell)):
+                if float(cell.text[:-1]) < 80:
+                    for cell2 in cells2:
+                        for a in cell2.find_all('a', href=True):
+                            if a['href'][:2] == "/p":
+                                playerIDs.add(a['href'][9:])
+
+    playerIDsList = list(playerIDs)
+    playerIDsList = playerIDsList[1:]
+
+    return playerIDsList
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug = True)

@@ -1,4 +1,4 @@
-<html>
+<div>
 
    <head>
      <link rel="stylesheet" media="screen" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
@@ -6,7 +6,7 @@
 
    <body>
      <div class="row">
-        <h1 class="text-center"> Welcome to ArcTracker v0.1!</h1>
+        <h1 class="text-center"> Welcome to ArcTracker v1.0!</h1>
      </div>
      <div class="row">
         <img class="center-block" src="static/images/arcTrackerPic.jpg" alt="ArcTracker" style="width:752px;height:440px;">
@@ -15,18 +15,33 @@
        &nbsp;
      </div>
      <div class="row">
-        <p class="text-center lead"> This app is designed to keep track of items that top level arc
-            warden (eventually any hero) players are purchasing and information
+        <p class="text-center lead"> This app is designed to keep track of items that top rated players on Dotabuff are purchasing and (eventually) information
             about their games </p>
      </div>
-     <div class="row">
-     <form action="/result" method="get">
-        <div class="form-group">
-            <button class="center-block" type="submit" value="GetItems">Retrieve Item Counts!</button>
-        </div>
-     </form>
-    </body>
 
+     <div class="row">
+         <div class="card-group">
+         {% for hero in allHeros %}
+             <div class="col-md-2">
+              <div class="card">
+                <img class="card-img-top center-block" src="{{ hero['url_large_portrait'] }}" alt="HeroPic">
+                <div class="card-block">
+                  <h4 class="card-title text-center">{{ hero['localized_name'] }}</h4>
+                  <form action="/result/{{ hero['id'] }}" method="post">
+                      <button class="btn btn-primary center-block" type="submit">Get Results</button>
+                  </form>
+                  <p> </p>
+                </div>
+              </div>
+             </div>
+
+         {% endfor %}
+         </div>
+         </div>
+     </div>
+
+
+    </body>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script type="text/javascript" scr="/static/js/bootstrap.min.js"></script>
 
