@@ -62,6 +62,7 @@ topPlayers = [11984011]
 @app.route('/')
 def homepage():
     allHeros = api.get_heroes()['heroes']
+    allHeros = sorted(allHeros, key=lambda x: x['localized_name'])
     return render_template("homepage.html", allHeros=allHeros)
 
 @app.route('/result/<hero_id>', methods = ['POST', 'GET'])
@@ -74,14 +75,6 @@ def result(hero_id):
         result[0] = sorted(result[0].items(), key=lambda x: x[1], reverse=True)
         return render_template("result.html", result=result[0], total=result[1], allItems=allItems,
                                allHeros=allHeros, heroID=int(hero_id))
-
-    if request.method == 'GET':
-        #counting items with hardcoded arc things (obviously. "arc" tracker atm)
-        topPlayers = [11984011]
-        result = countItems(topPlayers, hero_id)
-        allItems = api.get_game_items()['items']
-        result[0] = sorted(result[0].items(), key=lambda x: x[1], reverse=True)
-        return render_template("result.html", result=result[0], total=result[1], allItems=allItems)
 
 #returns a dict with total unique items and counts of purchaes in games played
 #as <heroID> out of all <players> last 100 overall games
@@ -102,10 +95,7 @@ def countItems(players, heroID):
         #each call gets the last 100 TOTAL games (not just arc games)
         try:
             history = api.get_match_history(account_id=player)
-            print(history)
             for game in history['matches']:
-                #print(heroID)
-                print(game['players'])
                 for guy in game['players']:
                     if str(guy['account_id']) == str(player) and int(guy['hero_id']) == int(heroID):
                         allgames.append(game['match_id'])

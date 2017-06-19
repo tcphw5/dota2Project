@@ -23,7 +23,7 @@
 
                   <td height="64"> {% for item in allItems %} {% if item['id'] == key %} {{ item['localized_name'] }}{% endif %}{% endfor %} </td>
                   <td height="64"> {{ value }} </td>
-                  <td height="64"> {{ (value / total) * 100 }} </td>
+                  <td height="64" id="percent"> {{ (value / total) * 100 }} </td>
                </tr>
 
             {% endfor %}
@@ -32,6 +32,13 @@
        <div class="col-md-4"></div>
      </div>
 
+   <script>
+       function decimalFix(num) {
+           document.getElementById(num)
+           num = num.toFixed(2)
+           document.getElementById("percent").innerHTML = num;
+       }
+   </script>
 
    </body>
 </html>
